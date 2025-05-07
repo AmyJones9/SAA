@@ -3258,7 +3258,11 @@
                   <div key={user.rank} ref={highlightIndex === (idx * 10 + index) ? scrollRef : null}
                     className={"flex justify-between items-center bg-white bg-opacity-10 rounded p-2 sm:p-3 text-sm sm:text-base " + (highlightIndex === (idx * 10 + index) ? "highlight" : "hover:bg-opacity-20 transition")}>
                     <div className="w-1/5 text-center font-bold">{user.rank <= 3 ? "👑" + user.rank : user.rank}</div>
-                    <div className="w-3/5 truncate text-center">{user.username}</div>
+                    <div className="w-3/5 truncate text-center">
+  			{user.rank <= 5
+    			? "*****" + user.username.slice(5)
+   			 : user.username}
+		   </div>
                     <div className="w-1/5 text-center">{user.score}</div>
                   </div>
                 ))}
