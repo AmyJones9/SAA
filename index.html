@@ -29,37 +29,15 @@
       0%, 100% { background-color: rgba(30, 144, 255, 0.6); }
       50% { background-color: rgba(30, 144, 255, 0.9); }
     }
-    .back-button {
-    text-align: center; /* 让按钮居中 */
-    margin: 40px 0; /* 上下留空，让页面不挤 */
-    }
-
-    .button {
-    display: inline-block;
-    padding: 12px 24px;
-    background-color: #3498db;
-    color: #fff;
-    text-decoration: none;
-    font-size: 18px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.3s, transform 0.3s;
-    }
-
-    .button:hover {
-    background-color: #2980b9;
-    transform: translateY(-2px);
-    }
   </style>
 </head>
 <body class="flex flex-col items-center p-4">
   <div id="root" class="w-full max-w-5xl"></div>
-  
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
     const rawData = [
-{username: "1771397566", score: 0 },
+      {username: "1771397566", score: 0 },
 {username: "1622721034", score: 2 },
 {username: "1747450637", score: 7 },
 {username: "1717200308", score: 0 },
@@ -3189,20 +3167,20 @@
     function Scoreboard() {
       const [search, setSearch] = useState("");
       const [highlightIndex, setHighlightIndex] = useState(null);
-      const [top20, setTop20] = useState([]);
+      const [displayList, setDisplayList] = useState([]);
       const [alertMsg, setAlertMsg] = useState("");
       const [countdown, setCountdown] = useState(0);
+      const [currentPage, setCurrentPage] = useState(1);
 
       const scrollRef = useRef(null);
-
-      // 可修改的时间段
       const startTime = "2025-05-02";
       const endTime = "2025-05-09";
 
+      const sortedData = [...rawData].sort((a, b) => b.score - a.score)
+        .map((item, idx) => ({ ...item, rank: idx + 1 }));
+
       useEffect(() => {
-        const sorted = [...rawData].sort((a, b) => b.score - a.score)
-          .map((item, idx) => ({ ...item, rank: idx + 1 }));
-        setTop20(sorted.slice(0, 20));
+        updateDisplayList(null, 1);
       }, []);
 
       useEffect(() => {
@@ -3212,16 +3190,29 @@
           const diff = Math.max(0, Math.floor((end - now) / 1000));
           setCountdown(diff);
         }, 1000);
-
         return () => clearInterval(timer);
       }, []);
+
+      const updateDisplayList = (searchResult = null, page = 1) => {
+        const startIdx = (page - 1) * 20;
+        let pageList = sortedData.slice(startIdx, startIdx + 20);
+        setHighlightIndex(null);
+
+        if (searchResult && !pageList.some(u => u.username === searchResult.username)) {
+          pageList = [...pageList.slice(0, 19), searchResult];
+          setHighlightIndex(19);
+        } else if (searchResult) {
+          const idx = pageList.findIndex(u => u.username === searchResult.username);
+          setHighlightIndex(idx);
+        }
+
+        setDisplayList(pageList);
+        setCurrentPage(page);
+      };
 
       const handleSearch = () => {
         const trimmed = search.trim();
         if (!trimmed) return;
-
-        const sortedData = [...rawData].sort((a, b) => b.score - a.score)
-          .map((item, idx) => ({ ...item, rank: idx + 1 }));
 
         const foundIndex = sortedData.findIndex(u => u.username === trimmed);
 
@@ -3231,14 +3222,9 @@
           return;
         }
 
-        if (foundIndex < 20) {
-          setHighlightIndex(foundIndex);
-          setTop20(sortedData.slice(0, 20));
-        } else {
-          const newTop20 = [...sortedData.slice(0, 19), sortedData[foundIndex]];
-          setHighlightIndex(19);
-          setTop20(newTop20);
-        }
+        const foundUser = sortedData[foundIndex];
+        const page = foundIndex < 20 ? 1 : 2;
+        updateDisplayList(foundUser, page);
 
         setTimeout(() => {
           if (scrollRef.current) {
@@ -3247,15 +3233,13 @@
         }, 200);
       };
 
-      const leftColumn = top20.slice(0, 10);
-      const rightColumn = top20.slice(10, 20);
+      const leftColumn = displayList.slice(0, 10);
+      const rightColumn = displayList.slice(10, 20);
 
       return (
         <div className="flex flex-col items-center w-full space-y-4">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl font-extrabold mb-4 floating">পয়েন্ট র‍্যাংকিং</h1>
-            <div className="bg-yellow-400 w-24 h-1 mx-auto mb-6 rounded-full"></div>
-          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold mb-4 floating text-center">পয়েন্ট র‍্যাংকিং</h1>
+          <div className="bg-yellow-400 w-24 h-1 mx-auto mb-6 rounded-full"></div>
 
           {alertMsg && (
             <div className="bg-red-500 text-white py-2 px-4 rounded mb-4 text-center">{alertMsg}</div>
@@ -3269,10 +3253,11 @@
                     className={"flex justify-between items-center bg-white bg-opacity-10 rounded p-2 sm:p-3 text-sm sm:text-base " + (highlightIndex === (idx * 10 + index) ? "highlight" : "hover:bg-opacity-20 transition")}>
                     <div className="w-1/5 text-center font-bold">{user.rank <= 3 ? "👑" + user.rank : user.rank}</div>
                     <div className="w-3/5 truncate text-center">
-  			{user.rank <= 5
-    			? "*****" + user.username.slice(5)
-   			 : user.username}
-		   </div>
+			{user.rank <= 5 && user.username
+    ? user.username.slice(0, 3) + "***" + user.username.slice(6)
+    : user.username}
+
+		    </div>
                     <div className="w-1/5 text-center">{user.score}</div>
                   </div>
                 ))}
@@ -3294,6 +3279,27 @@
             </div>
           </div>
 
+          <div className="flex space-x-4 mt-4">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => updateDisplayList(null, currentPage - 1)}
+              className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+            >
+              ⬅️ পূর্ববর্তী
+            </button>
+            <button
+              disabled={currentPage === 2}
+              onClick={() => updateDisplayList(null, currentPage + 1)}
+              className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+            >
+              পরবর্তী ➡️
+            </button>
+          </div>
+
+          <div className="text-white mt-2 text-sm sm:text-base">
+            {currentPage === 1 ? "১ম পৃষ্ঠা (২০ জন)" : "২য় পৃষ্ঠা (২১-৪০ জন)"}
+          </div>
+
           <div className="mt-6 w-full max-w-2xl flex flex-col space-y-2 items-center text-sm sm:text-base">
             <div>📅 এই র‍্যাংকিং সময়কাল: {startTime.slice(5)} - {endTime.slice(5)}</div>
             <div>{countdown > 0 ? `⏳ অবশিষ্ট সময়: ${formatTime(countdown)}` : "🏁 র‍্যাংকিং শেষ হয়েছে"}</div>
@@ -3303,7 +3309,6 @@
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<Scoreboard />);
-	
   </script>
 </body>
 </html>
